@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+
+TERMINAL=alacritty
+BROWSER=firefox
+BROWSERALT=librewolf
+MENU=~/OPT/shbin/custom_dmenu
+
+# this is a simple config for herbstluftwm
+
+hc() {
+    herbstclient "$@"
+}
+BG=$HOME/.config/backgrounds/
+
+hc emit_hook reload
+
+eval $(dbus-launch --sh-syntax --exit-with-session)
+export DBUS_SESSION_BUS_ADDRESS
+export DBUS_SESSION_BUS_PID
+
+xsetroot -solid '#1d0c16'
+feh --bg-fill $BG/bottom-right.png $BG/bottom-left.png $BG/top-right.png $BG/top-left.png
+#dex -a -s ${HOME}/.config/autostart/
+#pkill picom
+#picom &
+xcompmgr -cfF &
+
+# remove all existing keybindings
+hc keyunbind --all
+
+# keybindings
+# if you have a super key you will be much happier with Mod set to Mod4
+#Mod=Mod1    # Use alt as the main modifier
+Mod=Mod4   # Use the super key as the main modifier
+
+hc attr settings.default_frame_layout max
+hc set_layout max
+#hc floating toggle
+hc set focus_crosses_monitor_boundaries 1
+hc set swap_monitors_to_get_tag 1
+
+hc keybind $Mod-Shift-q quit
+hc keybind $Mod-Shift-r reload
+hc keybind $Mod-q close
+
+# launchers
+hc keybind $Mod-Return spawn "${TERMINAL:-xterm}" -e tmux
+hc keybind $Mod-d spawn "${MENU:-dmenu_run}"
+hc keybind $Mod-l spawn "${BROWSER}"
+hc keybind $Mod-Shift-l spawn "${BROWSERALT}"
+hc keybind $Mod-Control-space spawn playerctl play-pause
+hc keybind $Mod-n spawn "${TERMINAL:-xterm}" -e tmux new nvim
+hc keybind $Mod-e spawn "${TERMINAL:-xterm}" -e lem -i ncurses
+
+hc keybind XF86AudioRaiseVolume spawn amixer sset Master 2%+,2%+
+hc keybind XF86AudioLowerVolume spawn amixer sset Master 2%-,2%-
+hc keybind XF86AudioMute spawn amixer sset Master toggle
+hc keybind XF86AudioMicMute spawn amixer sset Capture toggle
+
+hc keybind XF86MonBrightnessUp spawn xbacklight -inc 10
+hc keybind XF86MonBrightnessDown spawn xbacklight -dec 10
+
+hc keybind $Mod-XF86PowerOff spawn st -e doas poweroff
+
+# basic movement in tiling and floating mode
+# focusing clients
+hc keybind $Mod-Left  focus left
+hc keybind $Mod-Down  focus down
+hc keybind $Mod-Up    focus up
+hc keybind $Mod-Right focus right
+
+# moving clients in tiling and floating mode
+hc keybind $Mod-Shift-Left  shift left
+hc keybind $Mod-Shift-Down  shift down
+hc keybind $Mod-Shift-Up    shift up
+hc keybind $Mod-Shift-Right shift right
+
+# splitting frames
+# create an empty frame at the specified direction
+hc keybind $Mod-s       split   bottom  0.5
+hc keybind $Mod-Shift-s       split   right   0.5
+# let the current frame explode into subframes
+hc keybind $Mod-Control-Tab split explode
+
+# resizing frames and floating clients
+resizestep=0.02
+hc keybind $Mod-Control-Left    resize left +$resizestep
+hc keybind $Mod-Control-Down    resize down +$resizestep
+hc keybind $Mod-Control-Up      resize up +$resizestep
+hc keybind $Mod-Control-Right   resize right +$resizestep
+
+# tags
+tag_names=( {1,2,3,4,5,6,7,8,9,'V'} )
+tag_keys=( {1..9} 0 )
+
+hc rename default "${tag_names[0]}" || true
+for i in "${!tag_names[@]}" ; do
+    hc add "${tag_names[$i]}"
+    key="${tag_keys[$i]}"
+    if [ -n "$key" ] ; then
+        hc keybind "$Mod-$key" use_index "$i"
+        hc keybind "$Mod-Shift-$key" move_index "$i"
+    fi
+#	hc use "${tag_names[$i]}"
+#	hc floating on
+done
+#hc use "${tag_names[0]}"
+
+# layouting
+hc keybind $Mod-x remove
+hc keybind $Mod-space floating toggle
+hc keybind $Mod-Shift-space set_attr clients.focus.floating toggle
+hc keybind $Mod-f fullscreen toggle
+#hc keybind $Mod-Shift-m set_attr clients.focus.minimized true
+#hc keybind $Mod-Control-m jumpto last-minimized
+# The following cycles through the available layouts within a frame, but skips
+# layouts, if the layout change wouldn't affect the actual window positions.
+# I.e. if there are two windows within a frame, the grid layout is skipped.
+hc keybind $Mod-Tab                                                           \
+            or , and . compare tags.focus.curframe_wcount = 2                   \
+                     . cycle_layout +1 vertical horizontal max vertical grid    \
+               , cycle_layout +1
+
+# mouse
+hc mouseunbind --all
+hc mousebind $Mod-Button1 move
+hc mousebind $Mod-Button2 zoom
+hc mousebind $Mod-Button3 resize
+
+# focus
+hc keybind $Mod-BackSpace   cycle_monitor
+
+hc keybind $Mod-t         cycle +1
+hc keybind $Mod-Control-t cycle_all +1
+hc keybind $Mod-Shift-t   cycle -1
+hc keybind $Mod-Control-Shift-t cycle_all -1
+
+#ACTIVECOL="#8affc4"
+#NORMALCOL="#ffdfba"
+#TABCOL="#181818"
+#NORMALTCOL="#ffb3f3"
+
+ACTIVECOL="#40639f"
+NORMALCOL="#934674"
+TABCOL="#2d1523"
+NORMALTCOL="#e18bbe"
+
+# theme
+hc attr theme.tiling.reset 1
+hc attr theme.floating.reset 1
+hc set frame_border_active_color "${ACTIVECOL}7f"
+hc set frame_border_normal_color "${NORMALCOL}7f"
+hc set frame_bg_normal_color "${NORMALCOL}7f"
+hc set frame_bg_active_color "${ACTIVECOL}7f"
+hc set frame_border_width 2
+hc set show_frame_decorations "focused_if_multiple"
+hc set frame_bg_transparent on
+hc set frame_transparent_width 5
+hc set frame_gap 0
+
+hc attr theme.title_height 4
+hc attr theme.title_when multiple_tabs
+hc attr theme.title_font "DejaVu Sans:pixelsize=0"  # example using Xft
+# hc attr theme.title_font "-*-fixed-medium-r-*-*-13-*-*-*-*-*-*-*"
+hc attr theme.title_depth 0 # space below the title"s baseline
+hc attr theme.active.color "${ACTIVECOL}7f"
+hc attr theme.title_color "${ACTIVECOL}7f"
+hc attr theme.normal.color "${NORMALTCOL}7f"
+hc attr theme.urgent.color "${ACTIVECOL}7f" 
+hc attr theme.tab_color "${TABCOL}7f"
+hc attr theme.active.tab_color "${TABCOL}7f"
+hc attr theme.active.tab_outer_color "${ACTIVECOL}7f"
+hc attr theme.active.inner_color "${ACTIVECOL}7f"
+hc attr theme.active.tab_title_color "${ACTIVECOL}7f"
+hc attr theme.normal.title_color "${NORMALTCOL}7f"
+hc attr theme.tab_title_color "${TABCOL}7f"
+hc attr theme.inner_width 1
+hc attr theme.inner_color black
+hc attr theme.border_width 0
+hc attr theme.floating.border_width 4
+hc attr theme.floating.outer_width 4
+hc attr theme.floating.outer_color "${ACTIVECOL}7f"
+hc attr theme.active.inner_color "${ACTIVECOL}7f"
+#${ACTIVECOL}
+hc attr theme.urgent.inner_color "${ACTIVECOL}7f" 
+hc attr theme.normal.inner_color "${NORMALTCOL}7f"
+# copy inner color to outer_color
+for state in active urgent normal ; do
+    hc substitute C theme.${state}.inner_color \
+        attr theme.${state}.outer_color C
+done
+hc attr theme.tiling.outer_width 0
+hc attr theme.background_color "${TABCOL}"
+
+hc set window_gap 0
+hc set frame_padding 0
+hc set smart_window_surroundings off
+hc set smart_frame_surroundings on # set this to on if solo frames should be gapless
+hc set mouse_recenter_gap 0
+
+# rules
+hc unrule -F
+hc rule focus=on
+hc rule floatplacement=smart
+hc rule windowtype~'_NET_WM_WINDOW_TYPE_(DIALOG|UTILITY|SPLASH)' floating=on
+hc rule windowtype='_NET_WM_WINDOW_TYPE_DIALOG' focus=on
+hc rule windowtype~'_NET_WM_WINDOW_TYPE_(NOTIFICATION|DOCK|DESKTOP)' manage=off
+hc rule fixedsize floating=on
+hc rule class='Virt-manager' tag='V'
+
+hc set tree_style '╾│ ├└╼─┐'
+
+# unlock, just to be sure
+hc unlock
+
+# do multi monitor setup here, e.g.:
+# hc set_monitors 1280x1024+0+0 1280x1024+1280+0
+# or simply:
+hc detect_monitors
+
+pkill polybar
+polybar -r top &
+#polybar -r bottom &
+# find the panel
+#panel=~/.config/herbstluftwm/panel.sh
+#[ -x "$panel" ] || panel=/etc/xdg/herbstluftwm/panel.sh
+#for monitor in $(hc list_monitors | cut -d: -f1) ; do
+#    # start it on each monitor
+#    "$panel" "$monitor" &
+#done
